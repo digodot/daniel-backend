@@ -147,33 +147,33 @@
       </div>
     </section>
 
-    <!-- FORMULÁRIO DE ENVIO DE ALERTA EM TEMPO REAL -->
+    <!-- FORMULÁRIO COM OPÇÕES PREDEFINIDAS -->
     <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-xs space-y-3">
-  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-      <i data-lucide="mega-phone" class="w-4 h-4 text-red-600"></i> Reportar Ocorrência em Tempo Real
-    </h3>
-    <span class="text-[9px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded-sm uppercase tracking-wide">Comunidade</span>
-  </div>
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="mega-phone" class="w-4 h-4 text-red-600"></i> Reportar Ocorrência em Tempo Real
+        </h3>
+        <span class="text-[9px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded-sm uppercase tracking-wide">Comunidade</span>
+      </div>
 
-  <form id="alertForm" class="space-y-3">
-    <div>
-      <label class="block text-xs font-bold text-slate-600 mb-1">Selecione o Alerta / Ocorrência:</label>
-      <select id="alertPreset" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 cursor-pointer">
-        <option value="shark_spotted" data-type="shark">🦈 Tubarão avistado próximo à margem / arrecifes</option>
-        <option value="deep_channel" data-type="drowning">🏊‍♂️ Vala profunda / Canal formado na maré alta</option>
-        <option value="rip_current" data-type="warning">🌊 Corrente de retorno forte (mar puxando)</option>
-        <option value="rough_waves" data-type="warning">⚠️ Mar agitado com ondas fortes para banho</option>
-        <option value="jellyfish" data-type="warning">🪼 Presença de caravelas / águas-vivas na água</option>
-        <option value="crowded_beach" data-type="warning">🚨 Praia lotada com visibilidade reduzida</option>
-      </select>
-    </div>
+      <form id="alertForm" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Selecione o Alerta / Ocorrência:</label>
+          <select id="alertPreset" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="shark_spotted" data-type="shark">🦈 Tubarão avistado próximo à margem / arrecifes</option>
+            <option value="deep_channel" data-type="drowning">🏊‍♂️ Vala profunda / Canal formado na maré alta</option>
+            <option value="rip_current" data-type="warning">🌊 Corrente de retorno forte (mar puxando)</option>
+            <option value="rough_waves" data-type="warning">⚠️ Mar agitado com ondas fortes para banho</option>
+            <option value="jellyfish" data-type="warning">🪼 Presença de caravelas / águas-vivas na água</option>
+            <option value="crowded_beach" data-type="warning">🚨 Praia lotada com visibilidade reduzida</option>
+          </select>
+        </div>
 
-    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-3 rounded-xl transition-colors shadow-md shadow-red-200 flex items-center justify-center gap-2 cursor-pointer">
-      <i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta para Todos
-    </button>
-  </form>
-</section>
+        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-3 rounded-xl transition-colors shadow-md shadow-red-200 flex items-center justify-center gap-2 cursor-pointer">
+          <i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta para Todos
+        </button>
+      </form>
+    </section>
 
     <!-- MAPA OPERACIONAL -->
     <section class="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs space-y-3">
@@ -234,27 +234,32 @@
 
   <!-- LÓGICA JAVASCRIPT -->
   <script>
-    // ⚠️ COLE AQUI A URL DO SEU BACK-END NO RENDER
     const RENDER_SERVER_URL = "https://daniel-backend-2866.onrender.com"; 
+
+    function getOrCreateDeviceId() {
+      let id = localStorage.getItem('daniel_device_id');
+      if (!id) {
+        id = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+        localStorage.setItem('daniel_device_id', id);
+      }
+      return id;
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
 
-      // Conexão com o servidor WebSockets no Render
       let socket = null;
       try {
         socket = io(RENDER_SERVER_URL);
         
         socket.on('connect', () => {
-          console.log("Conectado ao servidor de tempo real no Render!");
+          console.log("Conectado ao servidor no Render!");
         });
 
-        // Recebe os alertas iniciais cadastrados por outros usuários
         socket.on('load_initial_alerts', (alerts) => {
           alerts.forEach(alert => plotUserAlertOnMap(alert));
         });
 
-        // Recebe novos alertas transmitidos em tempo real por outros banhistas
         socket.on('new_community_alert', (alert) => {
           plotUserAlertOnMap(alert);
           if (alert.beachKey === document.getElementById('locationSelect').value) {
@@ -262,7 +267,7 @@
           }
         });
       } catch (err) {
-        console.warn("Modo offline: Servidor no Render não conectado.", err);
+        console.warn("Modo offline: Servidor não conectado.", err);
       }
 
       const beachData = {
@@ -274,14 +279,6 @@
         'carneiros': { lat: -8.7058, lng: -35.0792, name: 'Praia de Carneiros', status: 'seguro', title: 'Águas Calmas e Mornas', desc: 'Excelente para banho em qualquer maré. Visite a Capela de São Benedito.', nextEvent: 'Baixa: 11:30 (0.2m)', sharkRisk: 'Baixo', currentHeight: '0.3m' },
         'maria-farinha': { lat: -7.8383, lng: -34.8368, name: 'Maria Farinha', status: 'seguro', title: 'Águas Tranquilas e Náutica', desc: 'Ideal para esportes aquáticos e passeios de barco até a Coroa do Avião.', nextEvent: 'Alta: 16:00 (2.0m)', sharkRisk: 'Baixo', currentHeight: '0.5m' },
         'itamaraca': { lat: -7.7472, lng: -34.8258, name: 'Ilha de Itamaracá', status: 'seguro', title: 'Praia do Forte Orange', desc: 'Mar calmo perto do Forte Orange e Projeto Peixe-Boi.', nextEvent: 'Alta: 16:10 (2.1m)', sharkRisk: 'Baixo', currentHeight: '0.6m' }
-      };
-
-      const fallbackNews = {
-        'boa-viagem': [
-          { title: "Monitoramento captura primeiro tubarão de espécie associada a incidentes na RMR", src: "Folha de PE", link: "https://www.folhape.com.br/noticias/monitoramento-captura-primeiro-tubarao-associado-a-incidentes/284920/", date: "Recente" },
-          { title: "Pesquisa aponta área de arrecifes de Boa Viagem como zona de atenção na maré alta", src: "Diario de PE", link: "https://www.diariodepernambuco.com.br/", date: "Histórico" },
-          { title: "Bombeiros reforçam postos de salvamento ao longo da orla de Boa Viagem", src: "G1 PE", link: "https://g1.globo.com/pe/pernambuco/", date: "Histórico" }
-        ]
       };
 
       const mapPoints = [
@@ -346,7 +343,6 @@
         });
       }
 
-      // PLOTA PINO DE ALERTA DO USUÁRIO NO MAPA
       function plotUserAlertOnMap(alertData) {
         if (!vectorSource) return;
 
@@ -358,7 +354,7 @@
         feature.setStyle(new ol.style.Style({
           image: new ol.style.Circle({
             radius: 8,
-            fill: new ol.style.Fill({ color: '#9333ea' }), // Roxo para alertas de usuários
+            fill: new ol.style.Fill({ color: '#9333ea' }),
             stroke: new ol.style.Stroke({ color: '#ffffff', width: 2 })
           })
         }));
@@ -366,52 +362,53 @@
         vectorSource.addFeature(feature);
       }
 
-      // SUBMISSÃO DO FORMULÁRIO DE ALERTA
+      // ENVIO DO FORMULÁRIO DE ALERTAS
       document.getElementById('alertForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  
-  const LAST_ALERT_KEY = 'daniel_last_alert_timestamp';
-  const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutos
-  const now = Date.now();
-  const lastSent = localStorage.getItem(LAST_ALERT_KEY);
+        e.preventDefault();
+        
+        const LAST_ALERT_KEY = 'daniel_last_alert_timestamp';
+        const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutos
+        const now = Date.now();
+        const lastSent = localStorage.getItem(LAST_ALERT_KEY);
 
-  if (lastSent && (now - parseInt(lastSent)) < COOLDOWN_MS) {
-    const remainingMin = Math.ceil((COOLDOWN_MS - (now - parseInt(lastSent))) / 60000);
-    alert(`⏳ Limite de envio atingido!\n\nVocê só pode transmitir um alerta a cada 15 minutos.\nAguarde cerca de ${remainingMin} minuto(s).`);
-    return;
-  }
+        if (lastSent && (now - parseInt(lastSent)) < COOLDOWN_MS) {
+          const remainingMin = Math.ceil((COOLDOWN_MS - (now - parseInt(lastSent))) / 60000);
+          alert(`⏳ Limite de envio atingido!\n\nVocê só pode transmitir um alerta a cada 15 minutos.\nAguarde cerca de ${remainingMin} minuto(s).`);
+          return;
+        }
 
-  const beachKey = document.getElementById('locationSelect').value;
-  const currentBeach = beachData[beachKey];
-  const presetSelect = document.getElementById('alertPreset');
-  const selectedOption = presetSelect.options[presetSelect.selectedIndex];
-  
-  const type = selectedOption.getAttribute('data-type') || 'warning';
-  const desc = selectedOption.text; // Pega o texto limpo e seguro do menu suspenso
+        const beachKey = document.getElementById('locationSelect').value;
+        const currentBeach = beachData[beachKey];
+        const presetSelect = document.getElementById('alertPreset');
+        const selectedOption = presetSelect.options[presetSelect.selectedIndex];
+        
+        const type = selectedOption.getAttribute('data-type') || 'warning';
+        const desc = selectedOption.text;
 
-  const lat = currentBeach.lat + (Math.random() * 0.004 - 0.002);
-  const lng = currentBeach.lng + (Math.random() * 0.004 - 0.002);
+        const lat = currentBeach.lat + (Math.random() * 0.004 - 0.002);
+        const lng = currentBeach.lng + (Math.random() * 0.004 - 0.002);
 
-  if (socket && socket.connected) {
-    socket.emit('send_community_alert', {
-      beachKey: beachKey,
-      beachName: currentBeach.name,
-      type: type,
-      description: desc,
-      lat: lat,
-      lng: lng
-    }, (response) => {
-      if (response && response.success) {
-        localStorage.setItem(LAST_ALERT_KEY, Date.now().toString());
-        alert("✅ " + response.message);
-      } else if (response && response.message) {
-        alert("⚠️ " + response.message);
-      }
-    });
-  } else {
-    alert("Aviso: O servidor ainda está conectando. Tente novamente em alguns segundos.");
-  }
-});
+        if (socket && socket.connected) {
+          socket.emit('send_community_alert', {
+            deviceId: getOrCreateDeviceId(),
+            beachKey: beachKey,
+            beachName: currentBeach.name,
+            type: type,
+            description: desc,
+            lat: lat,
+            lng: lng
+          }, (response) => {
+            if (response && response.success) {
+              localStorage.setItem(LAST_ALERT_KEY, Date.now().toString());
+              alert("✅ " + response.message);
+            } else if (response && response.message) {
+              alert("⚠️ " + response.message);
+            }
+          });
+        } else {
+          alert("Aviso: O servidor ainda está conectando. Tente novamente em alguns segundos.");
+        }
+      });
 
       async function fetchWeather(lat, lng) {
         try {
