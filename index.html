@@ -370,32 +370,48 @@
 
       // SUBMISSÃO DO FORMULÁRIO DE ALERTA
       document.getElementById('alertForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const beachKey = document.getElementById('locationSelect').value;
-        const currentBeach = beachData[beachKey];
-        const type = document.getElementById('alertType').value;
-        const desc = document.getElementById('alertDesc').value;
+  e.preventDefault();
+  
+  const LAST_ALERT_KEY = 'daniel_last_alert_timestamp';
+  const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutos
+  const now = Date.now();
+  const lastSent = localStorage.getItem(LAST_ALERT_KEY);
 
-        // Leve variação nas coordenadas para não sobrepor o pino
-        const lat = currentBeach.lat + (Math.random() * 0.004 - 0.002);
-        const lng = currentBeach.lng + (Math.random() * 0.004 - 0.002);
+  if (lastSent && (now - parseInt(lastSent)) < COOLDOWN_MS) {
+    const remainingMin = Math.ceil((COOLDOWN_MS - (now - parseInt(lastSent))) / 60000);
+    alert(`⏳ Limite de envio atingido!\n\nVocê só pode transmitir um alerta a cada 15 minutos.\nAguarde cerca de ${remainingMin} minuto(s).`);
+    return;
+  }
 
-        if (socket && socket.connected) {
-          socket.emit('send_community_alert', {
-            beachKey: beachKey,
-            beachName: currentBeach.name,
-            type: type,
-            description: desc,
-            lat: lat,
-            lng: lng
-          });
-          document.getElementById('alertDesc').value = '';
-          alert("Alerta enviado com sucesso em tempo real!");
-        } else {
-          alert("Aviso: O servidor no Render ainda está inicializando. Tente novamente em alguns segundos.");
-        }
-      });
+  const beachKey = document.getElementById('locationSelect').value;
+  const currentBeach = beachData[beachKey];
+  const type = document.getElementById('alertType').value;
+  const desc = document.getElementById('alertDesc').value;
+
+  const lat = currentBeach.lat + (Math.random() * 0.004 - 0.002);
+  const lng = currentBeach.lng + (Math.random() * 0.004 - 0.002);
+
+  if (socket && socket.connected) {
+    socket.emit('send_community_alert', {
+      beachKey: beachKey,
+      beachName: currentBeach.name,
+      type: type,
+      description: desc,
+      lat: lat,
+      lng: lng
+    }, (response) => {
+      if (response && response.success) {
+        localStorage.setItem(LAST_ALERT_KEY, Date.now().toString());
+        document.getElementById('alertDesc').value = '';
+        alert("✅ " + response.message);
+      } else if (response && response.message) {
+        alert("⚠️ " + response.message);
+      }
+    });
+  } else {
+    alert("Aviso: O servidor ainda está conectando. Tente novamente em alguns segundos.");
+  }
+});
 
       async function fetchWeather(lat, lng) {
         try {
